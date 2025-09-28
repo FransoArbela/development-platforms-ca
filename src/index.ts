@@ -3,6 +3,8 @@ import type { Response, Request, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import usersRouter from "./routes/users.js";
+import authRoutes from "./routes/auth.js";
+import articleRouter from "./routes/articles.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerJSDoc from "swagger-jsdoc";
 
@@ -18,7 +20,7 @@ const swaggerOptions = {
     info: {
       title: "Dev platforms API",
       version: "1.0.0",
-      description: "A simple API for managing users and posts",
+      description: "A simple API for managing users and articles",
     },
     servers: [{ url: `http://localhost:${PORT}` }],
     components: {
@@ -31,19 +33,19 @@ const swaggerOptions = {
             email: { type: "string" },
           },
         },
-        Post: {
+        Article: {
           type: "object",
           properties: {
             id: { type: "integer" },
             title: { type: "string" },
             content: { type: "string" },
-            user_id: { type: "integer" },
+            submitted_by: { type: "integer" },
             created_at: { type: "string", format: "date-time" },
           },
         },
-        PostWithUser: {
+        ArticleWithUser: {
           allOf: [
-            { $ref: "#/components/schemas/Post" },
+            { $ref: "#/components/schemas/Article" },
             {
               type: "object",
               properties: {
@@ -60,14 +62,21 @@ const swaggerOptions = {
 };
 
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
-
+// Middleware
 app.use(express.json());
 app.use(cors());
 
+// API routes
 app.use("/users", usersRouter);
+app.use("/articles", articleRouter);
+app.use("/auth", authRoutes);
+
 // API documentation endpoint
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+
+
+// Basic route
 app.get("/", (req, res) => {
   res.json("Hello World!");
 });

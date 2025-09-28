@@ -1,28 +1,22 @@
 import { Router } from "express";
 import { type ResultSetHeader } from "mysql2";
 import { pool } from "../database.js";
-import type { Post, PostWithUser, User } from "../interfaces.js";
+import type { Article, User, UserResponse } from "../interfaces.js";
 import {
-  validatePartialUserData,
-  validateRequiredUserData,
   validateUserId,
-} from "../middleware/validation.js";
+  validateRequiredUserData,
+  validatePartialUserData,
+} from "../middleware/user-validation.js";
+import { authenticateToken } from "../middleware/auth-validation.js";
 
 const router = Router();
 
-/**
- * Get all users
- * @route GET /users
- * @returns {User[]} 200 - List of users
- * @returns {object} 500 - Failed to retrieve users
- */
 /**
  * @swagger
  * /users:
  *   get:
  *     summary: Get all users
- *     tags:
- *       - Users
+ *     tags: [Users]
  *     responses:
  *       200:
  *         description: List of users
@@ -32,14 +26,14 @@ const router = Router();
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/User'
+ *       500:
  *         description: Failed to retrieve users
  */
 router.get("/", async (req, res) => {
   try {
-    const [users] = (await pool.execute("SELECT * FROM users")) as [
-      User[],
-      unknown
-    ];
+    const [users] = (await pool.execute(
+      "SELECT id, username, email FROM users"
+    )) as [UserResponse[], unknown];
     res.json(users);
   } catch (error) {
     console.error("Database error:", error);
@@ -50,21 +44,11 @@ router.get("/", async (req, res) => {
 });
 
 /**
- * Get user by ID
- * @route GET /users/:id
- * @param {number} id.path.required - User ID
- * @returns {User} 200 - User details
- * @returns {object} 400 - Invalid user ID
- * @returns {object} 404 - User not found
- * @returns {object} 500 - Failed to update user
- */
-/**
  * @swagger
  * /users/{id}:
  *   get:
  *     summary: Get user by ID
- *     tags:
- *       - Users
+ *     tags: [Users]
  *     parameters:
  *       - in: path
  *         name: id
@@ -89,11 +73,12 @@ router.get("/:id", validateUserId, async (req, res) => {
   try {
     const userId = Number(req.params.id);
 
-    const [rows] = await pool.execute("SELECT * FROM users WHERE id = ?", [
-      userId,
-    ]);
+    const [rows] = await pool.execute(
+      "SELECT id, username, email FROM users WHERE id = ?",
+      [userId]
+    );
 
-    const user = rows as User[];
+    const user = rows as UserResponse[];
     if (user.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -108,85 +93,13 @@ router.get("/:id", validateUserId, async (req, res) => {
 });
 
 /**
- * Create a new user
- * @route POST /users
- * @body {string} username.body.required - Username
- * @body {string} email.body.required - Email
- * @returns {User} 201 - Created user
- * @returns {object} 500 - Failed to create user
- */
-/**
- * @swagger
- * /users:
- *   post:
- *     summary: Create a new user
- *     tags:
- *       - Users
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - username
- *               - email
- *             properties:
- *               username:
- *                 type: string
- *               email:
- *                 type: string
- *     responses:
- *       201:
- *         description: Created user
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       500:
- *         description: Failed to create user
- */
-router.post("/", validateRequiredUserData, async (req, res) => {
-  const { username, email } = req.body;
-  try {
-    const [result] = (await pool.execute(
-      "INSERT INTO users (username, email) VALUES (?, ?)",
-      [username, email]
-    )) as [ResultSetHeader, unknown];
-
-    const newUser: User = {
-      id: result.insertId,
-      username,
-      email,
-    };
-
-    res.status(201).json(newUser);
-  } catch (error) {
-    console.error("Database query error:", error);
-    res.status(500).json({
-      error: "Failed to create user",
-    });
-  }
-});
-
-/**
- * Update a user completely
- * @route PUT /users/:id
- * @param {number} id.path.required - User ID
- * @body {string} username.body.required - Username
- * @body {string} email.body.required - Email
- * @returns {User} 200 - Updated user
- * @returns {object} 400 - Invalid user ID
- * @returns {object} 404 - User not found
- * @returns {object} 500 - Failed to update user
- */
-/**
  * @swagger
  * /users/{id}:
  *   put:
  *     summary: Update a user completely
- *     tags:
- *       - Users
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -223,6 +136,7 @@ router.post("/", validateRequiredUserData, async (req, res) => {
  */
 router.put(
   "/:id",
+  authenticateToken,
   validateUserId,
   validateRequiredUserData,
   async (req, res) => {
@@ -241,7 +155,7 @@ router.put(
         });
       }
 
-      const user: User = { id: userId, username, email };
+      const user: UserResponse = { id: userId, username, email };
       res.json(user);
     } catch (error) {
       console.error("Database error:", error);
@@ -253,23 +167,13 @@ router.put(
 );
 
 /**
- * Partially update a user
- * @route PATCH /users/:id
- * @param {number} id.path.required - User ID
- * @body {string} [username] - Username
- * @body {string} [email] - Email
- * @returns {User} 200 - Updated user
- * @returns {object} 400 - Invalid user ID or no valid fields
- * @returns {object} 404 - User not found
- * @returns {object} 500 - Failed to update user
- */
-/**
  * @swagger
  * /users/{id}:
  *   patch:
  *     summary: Partially update a user
- *     tags:
- *       - Users
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -303,12 +207,19 @@ router.put(
  */
 router.patch(
   "/:id",
+  authenticateToken,
   validateUserId,
   validatePartialUserData,
   async (req, res) => {
     try {
       const userId = Number(req.params.id);
       const { username, email } = req.body;
+
+      if (req.user!.id !== userId) {
+        return res
+          .status(403)
+          .json({ error: "Forbidden: You can only update your own profile" });
+      }
 
       const fieldsToUpdate = [];
       const values = [];
@@ -342,7 +253,7 @@ router.patch(
         });
       }
 
-      const user: User = { id: userId, username, email };
+      const user: UserResponse = { id: userId, username, email };
       res.json(user);
     } catch (error) {
       console.error("Database error:", error);
@@ -354,20 +265,13 @@ router.patch(
 );
 
 /**
- * Delete a user
- * @route DELETE /users/:id
- * @param {number} id.path.required - User ID
- * @returns {object} 200 - User deleted successfully
- * @returns {object} 404 - User not found
- * @returns {object} 500 - Failed to delete user
- */
-/**
  * @swagger
  * /users/{id}:
  *   delete:
  *     summary: Delete a user
- *     tags:
- *       - Users
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -382,7 +286,7 @@ router.patch(
  *       500:
  *         description: Failed to delete user
  */
-router.delete("/:id", validateUserId, async (req, res) => {
+router.delete("/:id", authenticateToken, validateUserId, async (req, res) => {
   try {
     const userId = Number(req.params.id);
 
@@ -411,19 +315,11 @@ router.delete("/:id", validateUserId, async (req, res) => {
 });
 
 /**
- * Get posts for a user
- * @route GET /users/:id/posts
- * @param {number} id.path.required - User ID
- * @returns {Post[]} 200 - List of posts
- * @returns {object} 500 - Failed to fetch user posts
- */
-/**
  * @swagger
- * /users/{id}/posts:
+ * /users/{id}/articles:
  *   get:
- *     summary: Get posts for a user
- *     tags:
- *       - Users
+ *     summary: Get all articles for a user with user info
+ *     tags: [Users]
  *     parameters:
  *       - in: path
  *         name: id
@@ -432,124 +328,29 @@ router.delete("/:id", validateUserId, async (req, res) => {
  *           type: integer
  *     responses:
  *       200:
- *         description: List of posts
+ *         description: List of articles with user info
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Post'
- *       500:
- *         description: Failed to fetch user posts
+ *                 $ref: '#/components/schemas/Article'
  */
-router.get("/:id/posts", validateUserId, async (req, res) => {
-  try {
-    const userId = Number(req.params.id);
-
-    const [rows] = await pool.execute(
-      `
-      SELECT 
-        posts.id,
-        posts.title,
-        posts.content,
-        posts.user_id,
-        posts.created_at
-      FROM posts 
-      WHERE posts.user_id = ?
-      ORDER BY posts.created_at DESC
-    `,
-      [userId]
-    );
-
-    const posts = rows as Post[];
-    res.json(posts);
-  } catch (error) {
-    console.error("Error fetching user posts:", error);
-    res.status(500).json({ error: "Failed to fetch user posts" });
-  }
-});
-
-/**
- * Get posts for a user with user info
- * @route GET /users/:id/posts-with-user
- * @param {number} id.path.required - User ID
- * @returns {PostWithUser[]} 200 - List of posts with user info
- */
-/**
- * @swagger
- * /users/{id}/posts-with-user:
- *   get:
- *     summary: Get posts for a user with user info
- *     tags:
- *       - Users
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: List of posts with user info
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/PostWithUser'
- */
-router.get("/:id/posts-with-user", validateUserId, async (req, res) => {
+router.get("/:id/articles", validateUserId, async (req, res) => {
   const userId = Number(req.params.id);
 
   const [rows] = await pool.execute(
     `
-    SELECT posts.id, posts.title, posts.content, posts.user_id, posts.created_at,
+    SELECT articles.id, articles.title, articles.body, articles.submitted_by, articles.created_at, articles.category,
     users.username, users.email
-    FROM posts 
-    INNER JOIN users ON posts.user_id = users.id
+    FROM articles 
+    INNER JOIN users ON articles.submitted_by = users.id
     WHERE users.id = ?
   `,
     [userId]
   );
-
-  const posts = rows as PostWithUser[];
-  res.json(posts);
-});
-
-/**
- * @swagger
- * /users:
- *   get:
- *     summary: Get all users
- *     responses:
- *       200:
- *         description: List of users
- */
-router.get("/", async (req, res) => {
-  // code
-});
-
-/**
- * @swagger
- * /users/{id}:
- *   get:
- *     summary: Get user by ID
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: User details
- *       400:
- *         description: Invalid user ID
- *       404:
- *         description: User not found
- */
-router.get("/:id", validateUserId, async (req, res) => {
-  // code
+  const articles = rows as Article[];
+  res.json(articles);
 });
 
 export default router;
