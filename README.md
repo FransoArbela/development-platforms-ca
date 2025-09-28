@@ -7,7 +7,7 @@ cd development-platforms-ca
 2. Install dependencies
 ```bash
 npm install
-¨¨
+```
 
 3. Environment variables
 Create a .env file in the root folder. Example (.env.example would be great to include in your repo):
@@ -33,4 +33,4 @@ npm run build
 6. Run production build
 ```bash
 npm start
-¨¨
+```
