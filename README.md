@@ -1,4 +1,4 @@
-# development-platforms-ca
+# Development-platforms-ca
 
 1. Clone Repo
 git clone https://github.com/FransoArbela/development-platforms-ca.git
