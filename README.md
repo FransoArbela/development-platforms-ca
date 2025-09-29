@@ -10,7 +10,7 @@ npm install
 ```
 
 3. Environment variables
-Create a .env file in the root folder. Example (.env.example would be great to include in your repo):
+Create a .env file in the root folder.
 ```bash
 NODE_ENV=development
 DB_HOST=localhost
