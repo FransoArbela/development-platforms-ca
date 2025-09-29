@@ -46,4 +46,4 @@ Also, deciding who can do what and who needs to verify themselves to do stuff li
 
 Things that were difficult were not any really, i just had to read the guides twice, so everything was fine.
 
-The benefits of creating a custom API is obviously way more control, and you have exaclty what you need, no extra stuff, also the benefit of optimizing it further and further, depending on how and where you use it. Using SupaBase allows you to very quickly start your server side and have more focus on the front end, it could be great for smaller projects, since a custom API could be an overkill for projects like this we have, but a great way to understand and learn backend for sure.
+The benefits of creating a custom API is obviously way more control, and you have exaclty what you need, no extra stuff, also the benefit of optimizing it further and further, depending on how and where you use it. Using SupaBase allows you to very quickly start your server side and have more focus on the front end, it is really nice how Supabase can handle most things for you.
