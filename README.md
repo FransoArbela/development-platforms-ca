@@ -34,3 +34,16 @@ npm run build
 ```bash
 npm start
 ```
+
+# Why i went with this option?
+I was curious about the other side, since the day I started learning about APIs, and this was a great opportunity to take a dive and learn how things work under the hood. 
+
+I would really like to do more things on the backend side, as this gives me a sense of full control over what I am doing and what I want to do when it comes to building things.
+
+Things I particularly like were how much control I have and how I can decide what every request should do and what every response can be, at the same time, writing error responses made me understand how important it really is to write a clear and meaningful response when things don't go right. That was also one small, enjoyable part for me.
+
+Also, deciding who can do what and who needs to verify themselves to do stuff like create and edit was also fun.
+
+Things that were difficult were not any really, i just had to read the guides twice, so everything was fine.
+
+The benefits of creating a custom API is obviously way more control, and you have exaclty what you need, no extra stuff, also the benefit of optimizing it further and further, depending on how and where you use it. Using SupaBase allows you to very quickly start your server side and have more focus on the front end, it could be great for smaller projects, since a custom API could be an overkill for projects like this we have, but a great way to understand and learn backend for sure.
